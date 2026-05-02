@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Task Manager</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            margin: 20px;
+        }
+        input, button {
+            padding: 8px;
+            margin: 5px 0;
+        }
+        button {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Team Task Manager</h1>
+
+<button onclick="logout()">Logout</button>
+
+<script>
+let token = localStorage.getItem("token");
+
+if (!token) {
+    token = prompt("Enter your JWT access token");
+    localStorage.setItem("token", token);
+}
+</script>
+
+<h2>Create Project</h2>
+<form id="projectForm">
+    <input type="text" id="name" placeholder="Project Name"><br><br>
+    <input type="text" id="desc" placeholder="Description"><br><br>
+    <button type="submit">Create Project</button>
+</form>
+
+<h2>Projects</h2>
+<ul id="projectList"></ul>
+
+<hr>
+
+<h2>Create Task</h2>
+<form id="taskForm">
+    <input type="text" id="title" placeholder="Task Title"><br><br>
+    <input type="number" id="projectId" placeholder="Project ID"><br><br>
+    <button type="submit">Create Task</button>
+</form>
+
+<h2>Tasks</h2>
+<ul id="taskList"></ul>
+
+<script>
+function logout() {
+    localStorage.removeItem("token");
+    alert("Logged out!");
+    location.reload();
+}
+
+async function loadProjects() {
+    const res = await fetch("/api/projects/", {
+        headers: {
+            "Authorization": "Bearer " + token
+        }
+    });
+
+    if (res.status === 401) {
+        alert("Token expired, login again");
+        logout();
+        return;
+    }
+
+    const data = await res.json();
+    const list = document.getElementById("projectList");
+    list.innerHTML = "";
+
+    data.forEach(p => {
+        const li = document.createElement("li");
+        li.innerText = `ID: ${p.id} | ${p.name} - ${p.description}`;
+        list.appendChild(li);
+    });
+}
+
+async function loadTasks() {
+    const res = await fetch("/api/tasks/", {
+        headers: {
+            "Authorization": "Bearer " + token
+        }
+    });
+
+    if (res.status === 401) {
+        alert("Token expired, login again");
+        logout();
+        return;
+    }
+
+    const data = await res.json();
+    const list = document.getElementById("taskList");
+    list.innerHTML = "";
+
+    data.forEach(t => {
+        const li = document.createElement("li");
+        li.innerText = `Task: ${t.title} | Status: ${t.status} | Project: ${t.project}`;
+        list.appendChild(li);
+    });
+}
+
+document.getElementById("projectForm").onsubmit = async (e) => {
+    e.preventDefault();
+
+    const res = await fetch("/api/projects/", {
+        method: "POST",
+        headers: {
+            "Authorization": "Bearer " + token,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            name: document.getElementById("name").value,
+            description: document.getElementById("desc").value,
+            members: [2]
+        })
+    });
+
+    if (res.status === 201) {
+        alert("Project Created!");
+        loadProjects();
+    } else {
+        alert("Error creating project");
+    }
+};
+
+document.getElementById("taskForm").onsubmit = async (e) => {
+    e.preventDefault();
+
+    const res = await fetch("/api/tasks/", {
+        method: "POST",
+        headers: {
+            "Authorization": "Bearer " + token,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            title: document.getElementById("title").value,
+            description: "From UI",
+            status: "todo",
+            assigned_to: 2,
+            project: document.getElementById("projectId").value,
+            due_date: "2026-05-10T10:00:00Z"
+        })
+    });
+
+    if (res.status === 201) {
+        alert("Task Created!");
+        loadTasks();
+    } else {
+        alert("Error creating task");
+    }
+};
+
+loadProjects();
+loadTasks();
+</script>
+
+</body>
+</html>
