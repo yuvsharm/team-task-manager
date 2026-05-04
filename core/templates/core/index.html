@@ -21,40 +21,77 @@
 
 <h1>Team Task Manager</h1>
 
-<button onclick="logout()">Logout</button>
+<div id="loginSection">
+    <h2>Login</h2>
+    <input type="text" id="username" placeholder="Username"><br>
+    <input type="password" id="password" placeholder="Password"><br>
+    <button onclick="login()">Login</button>
+</div>
+
+<div id="appSection" style="display:none;">
+
+    <button onclick="logout()">Logout</button>
+
+    <h2>Create Project</h2>
+    <form id="projectForm">
+        <input type="text" id="name" placeholder="Project Name"><br><br>
+        <input type="text" id="desc" placeholder="Description"><br><br>
+        <button type="submit">Create Project</button>
+    </form>
+
+    <h2>Projects</h2>
+    <ul id="projectList"></ul>
+
+    <hr>
+
+    <h2>Create Task</h2>
+    <form id="taskForm">
+        <input type="text" id="title" placeholder="Task Title"><br><br>
+        <select id="projectId"></select><br><br>
+        <button type="submit">Create Task</button>
+    </form>
+
+    <h2>Tasks</h2>
+    <ul id="taskList"></ul>
+
+</div>
 
 <script>
 let token = localStorage.getItem("token");
 
-if (!token) {
-    token = prompt("Enter your JWT access token");
-    localStorage.setItem("token", token);
+if (token) {
+    document.getElementById("loginSection").style.display = "none";
+    document.getElementById("appSection").style.display = "block";
+    loadProjects();
+    loadTasks();
+} else {
+    document.getElementById("loginSection").style.display = "block";
+    document.getElementById("appSection").style.display = "none";
 }
-</script>
 
-<h2>Create Project</h2>
-<form id="projectForm">
-    <input type="text" id="name" placeholder="Project Name"><br><br>
-    <input type="text" id="desc" placeholder="Description"><br><br>
-    <button type="submit">Create Project</button>
-</form>
+async function login() {
+    const username = document.getElementById("username").value;
+    const password = document.getElementById("password").value;
 
-<h2>Projects</h2>
-<ul id="projectList"></ul>
+    const res = await fetch("/api/login/", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ username, password })
+    });
 
-<hr>
+    const data = await res.json();
 
-<h2>Create Task</h2>
-<form id="taskForm">
-    <input type="text" id="title" placeholder="Task Title"><br><br>
-    <input type="number" id="projectId" placeholder="Project ID"><br><br>
-    <button type="submit">Create Task</button>
-</form>
+    if (res.ok) {
+        localStorage.setItem("token", data.access);
+        alert("Login successful");
+        location.reload();
+    } else {
+        alert("Invalid credentials");
+    }
+}
 
-<h2>Tasks</h2>
-<ul id="taskList"></ul>
-
-<script>
 function logout() {
     localStorage.removeItem("token");
     alert("Logged out!");
@@ -69,12 +106,25 @@ async function loadProjects() {
     });
 
     if (res.status === 401) {
-        alert("Token expired, login again");
+        alert("Session expired, please login again");
         logout();
         return;
     }
 
     const data = await res.json();
+
+    // 🔥 DROPDOWN POPULATE
+    const dropdown = document.getElementById("projectId");
+    dropdown.innerHTML = "";
+
+    data.forEach(p => {
+        const option = document.createElement("option");
+        option.value = p.id;
+        option.text = `${p.name} (ID: ${p.id})`;
+        dropdown.appendChild(option);
+    });
+
+    // 🔹 PROJECT LIST
     const list = document.getElementById("projectList");
     list.innerHTML = "";
 
@@ -93,7 +143,7 @@ async function loadTasks() {
     });
 
     if (res.status === 401) {
-        alert("Token expired, login again");
+        alert("Session expired, please login again");
         logout();
         return;
     }
@@ -120,8 +170,7 @@ document.getElementById("projectForm").onsubmit = async (e) => {
         },
         body: JSON.stringify({
             name: document.getElementById("name").value,
-            description: document.getElementById("desc").value,
-            members: [2]
+            description: document.getElementById("desc").value
         })
     });
 
@@ -136,6 +185,8 @@ document.getElementById("projectForm").onsubmit = async (e) => {
 document.getElementById("taskForm").onsubmit = async (e) => {
     e.preventDefault();
 
+    const projectId = parseInt(document.getElementById("projectId").value);
+
     const res = await fetch("/api/tasks/", {
         method: "POST",
         headers: {
@@ -145,10 +196,17 @@ document.getElementById("taskForm").onsubmit = async (e) => {
         body: JSON.stringify({
             title: document.getElementById("title").value,
             description: "From UI",
+
+            // ✅ correct status
             status: "todo",
-            assigned_to: 2,
-            project: document.getElementById("projectId").value,
-            due_date: "2026-05-10T10:00:00Z"
+
+            // ✅ correct project
+            project: projectId,
+
+            // 🔥 REQUIRED FIELDS ADD
+            assigned_to: 1,
+
+            due_date: new Date().toISOString()   // auto current time
         })
     });
 
@@ -159,9 +217,6 @@ document.getElementById("taskForm").onsubmit = async (e) => {
         alert("Error creating task");
     }
 };
-
-loadProjects();
-loadTasks();
 </script>
 
 </body>
