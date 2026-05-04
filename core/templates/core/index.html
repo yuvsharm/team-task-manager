@@ -113,7 +113,6 @@ async function loadProjects() {
 
     const data = await res.json();
 
-    // 🔥 DROPDOWN POPULATE
     const dropdown = document.getElementById("projectId");
     dropdown.innerHTML = "";
 
@@ -197,16 +196,13 @@ document.getElementById("taskForm").onsubmit = async (e) => {
             title: document.getElementById("title").value,
             description: "From UI",
 
-            // ✅ correct status
             status: "todo",
 
-            // ✅ correct project
             project: projectId,
 
-            // 🔥 REQUIRED FIELDS ADD
             assigned_to: 1,
 
-            due_date: new Date().toISOString()   // auto current time
+            due_date: new Date().toISOString() 
         })
     });
 
